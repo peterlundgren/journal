@@ -1,37 +1,89 @@
 #!/usr/bin/python
 
 
+import datetime
 import re
 import sys
 
 
-def main():
-    timestamp = re.compile('\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}-\d{4}\]')
-    days = dict()
-    state = 0
-    input_file_name = sys.argv[1]
+class JournalEntry(object):
+    def __init__(self, datetime, text):
+        self.datetime = datetime
+        self.text = text
+        self._paragraphs = None
+    @property
+    def paragraphs(self):
+        if self._paragraphs is None:
+            self._parse_paragraphs()
+        return self._paragraphs
+    def _parse_paragraphs(self):
+        self._paragraphs = []
+        current_paragraph = ''
+        for line in self.text:
+            if line.strip():
+                current_paragraph += line
+            else:
+                if current_paragraph:
+                    self._paragraphs.append(current_paragraph)
+                    current_paragraph = ''
+        if current_paragraph:
+            self._paragraphs.append(current_paragraph)
+    def __str__(self):
+        return '[' + str(self.datetime) + ']\n' + str(self.paragraphs)
+
+
+class DailySummary(object):
+    def __init__(self, date):
+        self.date = date
+        self.entries = []
+    def add_entry(self, entry):
+        self.entries.append(entry)
+
+
+def parse_journal(input_file_name):
+    timestamp = re.compile('\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\]')
+    journal_entries = []
+    current_entry_datetime = None
+    current_entry_text = []
     input_file = open(input_file_name)
     for line in input_file:
-        if state == 0:
-            if timestamp.match(line):
-                day = line[1:11]
-            elif line.startswith('SUMMARY:'):
-                summary = line[8:]
-                state = 1
-        elif state == 1:
-            if line.strip():
-                summary += line
-            else:
-                if day in days:
-                    days[day].append(summary)
+        if timestamp.match(line):
+            journal_entries.append(JournalEntry(current_entry_datetime, current_entry_text))
+            current_entry_text = []
+            current_entry_datetime = datetime.datetime.strptime(line[1:20], '%Y-%m-%d %H:%M:%S')
+        else:
+            current_entry_text.append(line)
+    if current_entry_text:
+        journal_entries.append(JournalEntry(current_entry_datetime, current_entry_text))
+    return journal_entries
+
+
+def main():
+    input_file_name = sys.argv[1]
+    journal_entries = parse_journal(input_file_name)
+    daily_summaries = dict()
+    current_date = None
+    for journal_entry in journal_entries:
+        for paragraph in journal_entry.paragraphs:
+            if paragraph.startswith('SUMMARY:'):
+                date = journal_entry.datetime.date()
+                if date in daily_summaries:
+                    daily_summaries[date].add_entry(paragraph[9:])
                 else:
-                    days[day] = [summary]
-                state = 0
-    for day, summaries in sorted(days.iteritems(), reverse=True):
-        print '\n*    ' + day + '\n'
-        for summary in summaries:
+                    daily_summaries[date] = DailySummary(date)
+                    daily_summaries[date].add_entry(paragraph[9:])
+    previous_date = None
+    for date in sorted(daily_summaries, reverse=True):
+        if (previous_date and
+            (previous_date.weekday() <= date.weekday() or
+             previous_date.toordinal() - date.toordinal() > 7)):
+            print '---'
+        previous_date = date
+        daily_summary = daily_summaries[date]
+        print '*   ', date.strftime('%A %Y-%m-%d')
+        for entry in daily_summary.entries:
             first = True
-            for line in summary.strip().split('\n'):
+            for line in entry.strip().split('\n'):
                 if first:
                     first = False
                     print '    *   ' + line
