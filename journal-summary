@@ -89,11 +89,43 @@ def daily(journal_entries):
                     print '        ' + line
 
 
+def weekly(journal_entries):
+    weekly_summaries = dict()
+    current_date = None
+    for journal_entry in journal_entries:
+        in_weekly_summary = False
+        for paragraph in journal_entry.paragraphs:
+            if in_weekly_summary:
+                weekly_summaries[date].append(paragraph)
+            elif paragraph.startswith('WEEKLY SUMMARY:'):
+                date = journal_entry.datetime.date()
+                weekly_summaries[date] = [paragraph[16:]]
+                in_weekly_summary = True
+    previous_date = None
+    for date in sorted(weekly_summaries, reverse=True):
+        if (previous_date and
+            (previous_date.weekday() <= date.weekday() or
+             previous_date.toordinal() - date.toordinal() > 7)):
+            print '---'
+        previous_date = date
+        monday = date - datetime.timedelta(date.weekday())
+        friday = monday + datetime.timedelta(4)
+        weekly_summary = weekly_summaries[date]
+        print '*   ', monday.strftime('%A %Y-%m-%d'), 'through', friday.strftime('%A %Y-%m-%d')
+        for entry in weekly_summary:
+            first = True
+            for line in entry.strip().split('\n'):
+                print '    ' + line
+            print
+
+
 def main():
     input_file_name = sys.argv[2]
     journal_entries = parse_journal(input_file_name)
     if sys.argv[1] == 'daily':
         daily(journal_entries)
+    elif sys.argv[1] == 'weekly':
+        weekly(journal_entries)
 
 
 if __name__ == '__main__':
