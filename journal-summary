@@ -58,9 +58,7 @@ def parse_journal(input_file_name):
     return journal_entries
 
 
-def main():
-    input_file_name = sys.argv[1]
-    journal_entries = parse_journal(input_file_name)
+def daily(journal_entries):
     daily_summaries = dict()
     current_date = None
     for journal_entry in journal_entries:
@@ -89,6 +87,13 @@ def main():
                     print '    *   ' + line
                 else:
                     print '        ' + line
+
+
+def main():
+    input_file_name = sys.argv[2]
+    journal_entries = parse_journal(input_file_name)
+    if sys.argv[1] == 'daily':
+        daily(journal_entries)
 
 
 if __name__ == '__main__':
