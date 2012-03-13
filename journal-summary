@@ -75,7 +75,7 @@ def daily(journal_entries):
         if (previous_date and
             (previous_date.weekday() <= date.weekday() or
              previous_date.toordinal() - date.toordinal() > 7)):
-            print '---'
+            print '\n---\n'
         previous_date = date
         daily_summary = daily_summaries[date]
         print '*   ', date.strftime('%A %Y-%m-%d')
@@ -106,7 +106,7 @@ def weekly(journal_entries):
         if (previous_date and
             (previous_date.weekday() <= date.weekday() or
              previous_date.toordinal() - date.toordinal() > 7)):
-            print '---'
+            print '---\n'
         previous_date = date
         monday = date - datetime.timedelta(date.weekday())
         friday = monday + datetime.timedelta(4)
